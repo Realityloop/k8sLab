@@ -78,9 +78,9 @@ kubectl-proxy:
 ## Minikube: Start service
 minikube-start:
 	@$(call title,Starting Minikube service)
-	@$(if $(shell minikube status | grep -o 'Stopped'), \
-		@$(call exec,minikube start), \
-		@$(call print,Minikube is already running.) \
+	@$(if $(shell minikube status | grep -o 'minikube: Running'), \
+		@$(call print,Minikube is already running.), \
+		@$(call exec,minikube start --extra-config=apiserver.admission-control="") \
 	)
 
 minikube-install:
