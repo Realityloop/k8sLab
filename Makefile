@@ -72,8 +72,9 @@ kubectl-install:
 
 ## kubectl: Proxy
 kubectl-proxy:
+	$(call local_ip)
 	@$(call title,Starting kubectl proxy)
-	@$(call exec,kubectl proxy --port=8443 --address=10.1.2.74 --accept-hosts="^*$$")
+	@$(call exec,kubectl proxy --port=8443 --address=$(LOCAL_IP) --accept-hosts="^*$$")
 
 ## Minikube: Start service
 minikube-start:
@@ -146,6 +147,10 @@ define install
 		$(call title,Installing $1) && \
 		$(call exec,$3)
 	)
+endef
+
+define local_ip
+	$(eval LOCAL_IP := $(shell ifconfig | grep "inet " | grep -Fv 127.0.0.1 | awk '{print $$2; exit}'))
 endef
 
 ## Print text to screen.
