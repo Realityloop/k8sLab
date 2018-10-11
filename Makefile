@@ -1,27 +1,23 @@
+include mk/*.mk
+
 .DEFAULT_GOAL := help
-.PHONY: help install info up dashboard brew-install jq-install kubectl-install kubectl-proxy minikube-start minikube-install virtualbox-install
+.PHONY: help install info up dashboard brew-install jq-install kubectl-install kubectl-proxy virtualbox-install
 
 # TARGETS
 
-## Display this help message.
-help:
-	@echo ''
-	@echo 'Usage:'
-	@echo '  ${YELLOW}make${RESET} ${GREEN}<target>${RESET}'
-	@echo ''
-	@echo 'Targets:'
-	@awk '/^[a-zA-Z\-\_0-9]+:/ { \
-		helpMessage = match(lastLine, /^## (.*)/); \
-		if (helpMessage) { \
-			helpCommand = substr($$1, 0, index($$1, ":")-1); \
-			helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
-			printf "  ${YELLOW}%-$(TARGET_MAX_CHAR_NUM)s${RESET} ${GREEN}%s${RESET}\n", helpCommand, helpMessage; \
-		} \
-	} \
-	{ lastLine = $$0 }' $(MAKEFILE_LIST)
-
 ## k8sLab: Install
-install: brew-install virtualbox-install kubectl-install minikube-install minikube-start jq-install
+install: dependencies-install minikube-up
+
+dependencies-install:
+	@$(call install,Homebrew,brew,curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install | ruby)
+
+	@$(call install,VirtualBox,virtualbox,brew cask install virtualbox)
+
+	@$(call install,kubectl,kubectl,brew install kubectl)
+
+	@$(call install,Minikube,minikube,brew cask install minikube)
+
+	@$(call install,jq,jq,brew install jq)
 
 ## k8sLab: Info for GitLab
 info:
@@ -51,60 +47,32 @@ info-token:
 	@echo $(TOKEN)
 
 ## k8sLab: Start services
-up: minikube-start info kubectl-proxy
+up: minikube-up info kubectl-proxy
+
+## k8sLab: Stop services
+down: minikube-down
+
+## k8sLab: Reset minikube and start services
+reset: minikube-reset info kubectl-proxy
+
+## k8sLab: Reset minikube and start services
+re: minikube-reset info kubectl-proxy
+
+## k8sLab: Delete minikube cluster.
+clean: minikube-clean
 
 ## k8sLab: Open k8s dashboard in default browser.
 dashboard:
 	@$(call title,Launching k8s dashboard)
 	@$(call exec,minikube dashboard)
 
-brew-install:
-	@$(call install,Homebrew,brew,curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install | ruby)
+ngrok:
+	@$(call install,ngrok,ngrok,brew cask install ngrok)
 
-	@$(call title,Installing Homebrew Cask)
-	@$(call exec,brew tap caskroom/cask)
+	@$(call title,Starting ngrok service)
 
-jq-install:
-	@$(call install,jq,jq,brew install jq)
-
-kubectl-install:
-	@$(call install,kubectl,kubectl,brew install kubectl)
-
-## kubectl: Proxy
-kubectl-proxy:
 	$(call local_ip)
-	@$(call title,Starting kubectl proxy)
-	@$(call exec,kubectl proxy --port=8443 --address=$(LOCAL_IP) --accept-hosts="^*$$")
-
-## Minikube: Start service
-minikube-start:
-	@$(call title,Starting Minikube service)
-	@$(if $(shell minikube status | grep -o 'minikube: Running'), \
-		@$(call print,Minikube is already running.), \
-		@$(call exec,minikube start --extra-config=apiserver.admission-control="") \
-	)
-
-minikube-install:
-	@$(call install,Minikube,minikube,brew cask install minikube)
-
-	@$(call title,Minikube: Enable ingress)
-	@$(call exec,minikube addons enable ingress)
-
-virtualbox-install:
-	@$(call install,VirtualBox,virtualbox,brew cask install virtualbox)
-
-
-
-# VARIABLES.
-
-TARGET_MAX_CHAR_NUM := 32
-
-## Colors for output text.
-
-GREEN  := $(shell tput -Txterm setaf 2)
-YELLOW := $(shell tput -Txterm setaf 3)
-WHITE  := $(shell tput -Txterm setaf 7)
-RESET  := $(shell tput -Txterm sgr0)
+	ngrok http $(LOCAL_IP):8443
 
 
 
@@ -115,23 +83,8 @@ define api_token
 	@$(eval TOKEN := $(shell kubectl get secret $(SECRET) -o yaml | grep "token:" | awk {'print $$2'} | base64 -D))
 endef
 
-define confirm
-	echo "${1} [y/N] " && read ans && [ $${ans:-N} == y ]
-endef
-
-## Print a line break to screen.
-define break
-	printf "\n"
-endef
-
-## Print a command to screen.
-define command
-	printf "> ${YELLOW}${subst ",',${1}}${RESET}\n\n"
-endef
-
-## Execute command and print to screen.
-define exec
-	printf "$$ ${YELLOW}${subst ",',${1}}${RESET}\n\n" && $1
+define local_ip
+	$(eval LOCAL_IP := $(shell ifconfig | grep "inet " | grep -Fv 127.0.0.1 | awk '{print $$2; exit}'))
 endef
 
 ## Checks for dependency, and prompts to install if missing.
@@ -149,19 +102,6 @@ define install
 	)
 endef
 
-define local_ip
-	$(eval LOCAL_IP := $(shell ifconfig | grep "inet " | grep -Fv 127.0.0.1 | awk '{print $$2; exit}'))
-endef
-
-## Print text to screen.
-define print
-	printf "${1}\n\n"
-endef
-
-## Print a title/heading to screen.
-define title
-	printf "\n\n${GREEN}>>> ${1}...${RESET}\n\n\n"
-endef
 
 
 # https://stackoverflow.com/a/6273809/1826109

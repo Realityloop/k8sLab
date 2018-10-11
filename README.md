@@ -26,10 +26,3 @@ and your access details will be output to the terminal.
 
 For GitLab to connect to k8sLab you will need to setup portforwarding of your
 external IP to your local machine IP on TCP Port 8443.
-
-
-## Issues
-
-- Installing Helm Tiller:
-
-  > Error: error installing: deployments.extensions is forbidden: User "system:serviceaccount:gitlab-managed-apps:default" cannot create deployments.extensions in the namespace "gitlab-managed-apps"
