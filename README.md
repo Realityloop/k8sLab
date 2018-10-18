@@ -1,7 +1,7 @@
 # k8sLab
 
 k8sLab is a local Kubernetes cluster using Minikube and tailored for GitLab
-based development.
+Auto-DevOps based development.
 
 ## Installation
 
@@ -21,6 +21,11 @@ or prompt to install them otherwise:
 
 ## Running
 
-Once every is install, simply run the following command to start the services:
+Once everything is installed, simply run the following command to start the
+services:
 
 > `make up`
+
+Remember to stop the services once you are done with the following command:
+
+> `make down`
